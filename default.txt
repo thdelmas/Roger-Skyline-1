@@ -1,0 +1,40 @@
+limit_req_zone $binary_remote_addr zone=perip:10m rate=1r/s;
+limit_req_zone $server_name zone=perserver:10m rate=10r/s;
+server {
+
+	listen 80;
+
+	server_name localhost;
+
+	return 301 https://$host:443$request_uri;
+}
+
+server {
+
+	limit_req zone=perip burst=50 nodelay;
+	limit_req zone=perserver burst=50;
+
+	listen 443 ssl;
+	server_name localhost;
+
+	ssl on;
+	ssl_certificate /etc/ssl/certs/myssl.crt;
+	ssl_certificate_key /etc/ssl/private/myssl.key;
+
+	root /var/www/monsite.test;
+	index index.php index.html;
+
+	error_log /var/www/monsite.test/logs/error_log;
+	access_log /var/www/monsite.test/logs/access_log;
+	location / {
+		try_files $uri $uri/ =404;
+	}
+
+	location ~ \.php$ {
+
+		include snippets/fastcgi-php.conf;
+
+		fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+	}
+
+}
